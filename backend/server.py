@@ -16,7 +16,7 @@ import threading
 import time
 import traceback
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -232,10 +232,14 @@ def agendador():
 def listar_concursos():
     bancas = meta_get("bancas_lista", [])
     with LOCK:
-        rows = CON.execute("SELECT dados FROM concursos WHERE ativo=1").fetchall()
+        # abertos + encerrados nos últimos 30 dias (somem da lista do PCI quando as inscrições fecham)
+        rows = CON.execute("SELECT dados, ativo, ultimo_visto FROM concursos WHERE ativo=1 OR ultimo_visto >= ?",
+                           ((datetime.now() - timedelta(days=30)).isoformat(),)).fetchall()
     out = []
     for r in rows:
         c = json.loads(r["dados"])
+        if not r["ativo"]:
+            c["status"], c["encerradoEm"] = "encerrado", r["ultimo_visto"][:10]
         b, u = banca_para(c, bancas)
         if b:
             c["banca"], c["bancaUrl"] = b, u

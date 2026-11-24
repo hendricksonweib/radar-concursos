@@ -30,6 +30,7 @@ INTERVALOS = {  # segundos; com o cron de 15 min, 0 = toda execução
     "bancas": int(os.environ.get("INTERVALO_BANCAS", 120 * MIN)),
 }
 MAX_SINAIS = 3000
+DIAS_ENCERRADOS = 30
 
 
 def agora():
@@ -112,8 +113,19 @@ def main(saida):
             c["primeiroVisto"] = ant["primeiroVisto"] if ant else ts
             c["publicado"] = ant["publicado"] if ant else hoje
             novo[c["id"]] = c
-        print(f"PCI: {len(itens)} abertos, {len(set(novo) - set(concursos))} novos")
-        concursos = novo  # o que sumiu = inscrições encerradas
+        # o que sumiu da lista de abertos = inscrições encerradas; fica visível por DIAS_ENCERRADOS
+        corte = (datetime.now(BRT) - timedelta(days=DIAS_ENCERRADOS)).date().isoformat()
+        encerrados = 0
+        for cid, c in concursos.items():
+            if cid in novo:
+                continue
+            if c.get("status") != "encerrado":
+                c["status"], c["encerradoEm"] = "encerrado", hoje
+            if c.get("encerradoEm", hoje) >= corte:
+                novo[cid] = c
+                encerrados += 1
+        print(f"PCI: {len(itens)} abertos, {len(set(novo) - set(concursos))} novos, {encerrados} encerrados nos últimos {DIAS_ENCERRADOS} dias")
+        concursos = novo
         return len(itens)
 
     # --- Diário Oficial
@@ -171,7 +183,7 @@ def main(saida):
     gravar(saida, "sinais.json", {"gerado": ts, "itens": lista_sinais})
     gravar(saida, "bancas.json", bancas)
     gravar(saida, "status.json", {
-        "gerado": ts, "status": status, "concursos": len(concursos),
+        "gerado": ts, "status": status, "concursos": sum(1 for c in concursos.values() if c.get("status") != "encerrado"),
         "sinaisDou": sum(1 for s in lista_sinais if s.get("fonte") == "Diário Oficial da União"),
         "alvos": alvos(), "alvosBuscados": sorted(alvos_feitos), "intervaloMin": 15,
     })

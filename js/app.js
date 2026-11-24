@@ -81,6 +81,8 @@
     if (S.tipo && c.tipo !== S.tipo) return null;
     if (S.esfera.size && !S.esfera.has(c.esfera)) return null;
     if (S.status.size && !S.status.has(c.status)) return null;
+    // encerrados só aparecem com o filtro "Encerrado" ou nos favoritos
+    if (!S.status.size && c.status === "encerrado" && !(S.tab === "favoritos" && !ignoreTab)) return null;
     if (!ignoreGeo) {
       if (S.uf && !c.ufs.includes(S.uf)) return null;
       if (S.mun && c.mun !== S.mun) return null;
@@ -307,6 +309,8 @@
     if (c.status === "edital_aberto" && c.inscricoesAte) {
       const d = daysLeft(c.inscricoesAte);
       prazo = `<div class="deadline ${d <= 7 ? "urgent" : ""}">Inscrições até ${fmtDate(c.inscricoesAte)}<br>${d < 0 ? "prazo vencido — confira prorrogação" : d === 0 ? "último dia" : d === 1 ? "falta 1 dia" : `faltam ${d} dias`}</div>`;
+    } else if (c.status === "encerrado") {
+      prazo = `<div class="deadline muted">Inscrições encerradas${c.encerradoEm || c.inscricoesAte ? "<br>em " + fmtDate(c.encerradoEm || c.inscricoesAte) : ""}</div>`;
     } else prazo = `<div class="deadline muted">${c.banca ? "Banca: " + esc(c.banca) : "Banca a definir"}</div>`;
     return `<article class="card item ${sim ? "similar" : ""} ${alvo ? "is-target" : ""} ${S.fresh.has(c.id) ? "fresh" : ""}" data-open="${c.id}">
       <div class="item-top">
@@ -519,7 +523,7 @@
         <div><span>Esfera</span>${ESFERA[c.esfera]} · ${c.tipo === "publico" ? "Público" : "Privado / estatal"}</div>
         <div><span>Banca</span>${esc(c.banca || "A definir")}</div>
         <div><span>Publicado em</span>${c.publicado ? fmtDate(c.publicado) : "—"}</div>
-        <div><span>Inscrições até</span>${c.inscricoesAte ? fmtDate(c.inscricoesAte) + ` (${daysLeft(c.inscricoesAte)} dias)` : "—"}</div>
+        <div><span>Inscrições até</span>${c.inscricoesAte ? fmtDate(c.inscricoesAte) + (c.status === "encerrado" ? " (encerradas)" : ` (${daysLeft(c.inscricoesAte)} dias)`) : "—"}</div>
         <div style="grid-column:1/-1"><span>Lotação</span>${c.mun ? esc(c.munNome) + "/" + c.ufs[0] : c.ufs.length >= 20 ? "Todos os estados" : c.ufs.join(", ")}</div>
       </div>
       <div class="detail-sec">
