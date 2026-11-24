@@ -1,0 +1,54 @@
+# Coleta os concursos a cada ~15 min e publica os JSON na branch "dados" (sem histórico: 1 commit só).
+# Não precisa de nenhum segredo: usa o token automático do próprio GitHub Actions.
+name: Coletar concursos
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # o GitHub pode atrasar alguns minutos
+  workflow_dispatch: {}        # botão "Run workflow" para rodar na hora
+
+permissions:
+  contents: write
+
+concurrency:
+  group: coleta
+  cancel-in-progress: false
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Recuperar a coleta anterior
+        run: |
+          mkdir -p publico
+          if git ls-remote --exit-code --heads origin dados > /dev/null; then
+            git fetch --depth 1 origin dados
+            git archive FETCH_HEAD | tar -x -C publico
+          fi
+
+      - name: Cache da lista de municípios (IBGE)
+        uses: actions/cache@v4
+        with:
+          path: backend/dados/municipios.json
+          key: municipios-ibge-v1
+
+      - name: Coletar
+        run: python3 backend/coletar_json.py publico
+
+      - name: Publicar na branch dados
+        working-directory: publico
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git init -q -b dados
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -qm "dados $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push -qf "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" dados

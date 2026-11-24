@@ -1,0 +1,13 @@
+# segredos e config local (nunca versionar)
+.env
+.env.*
+!.env.example
+
+# dados gerados localmente (a versão publicada vive na branch "dados")
+backend/dados/
+publico/
+
+__pycache__/
+*.pyc
+.vercel/
+.DS_Store

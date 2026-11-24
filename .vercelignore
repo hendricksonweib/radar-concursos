@@ -1,0 +1,7 @@
+# só o site vai para a Vercel; coleta e ferramentas ficam no GitHub
+backend/
+tools/
+.github/
+.env
+.env.*
+README.md

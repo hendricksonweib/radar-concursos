@@ -1,0 +1,2 @@
+# Órgãos que o robô procura no Diário Oficial a cada coleta (um por linha), além da lista padrão
+# em backend/comum.py. Use o nome oficial, ex.: Agência Brasileira de Inteligência
